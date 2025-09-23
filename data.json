@@ -12,8 +12,9 @@
     "reason": "Document Signing",
     "seal_img": "seal.png",
     "signature_img": "signature.png",
-    "photo": "myphoto.jpg" 
+    "photo": "myphoto.jpg", 
     "attachments": []
   }
 ]
+
 
