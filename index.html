@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Application Details</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="doc" class="card">
+    <header>
+      <h1>Application Details</h1>
+      <button id="downloadBtn">Download PDF</button>
+    </header>
+
+    <section id="content">
+      <p>Loading...</p>
+    </section>
+
+    <aside id="qrwrap">
+      <!-- QR will be inserted here -->
+    </aside>
+  </main>
+
+  <!-- html2pdf (bundled with html2canvas + jsPDF) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
+
+  <script>
+    // Get ?no= value
+    const params = new URLSearchParams(location.search);
+    const no = params.get('no') || '';
+
+    async function render() {
+      try {
+        const r = await fetch('data.json'); // relative path
+        const items = await r.json();
+        const rec = items.find(x => x.no === no);
+        const content = document.getElementById('content');
+
+        if (!rec) {
+          content.innerHTML = '<p style="color:#b00;">No record found for number: ' + (no || '(none)') + '</p>';
+          return;
+        }
+
+        // Build HTML (brief example)
+        content.innerHTML = `
+          <div class="doc-header">
+            <h2>E-APOSTILLE</h2>
+            <p><strong>Country:</strong> ${rec.country}</p>
+            <p><strong>No</strong> ${rec.no}</p>
+            <p><strong>Certified at:</strong> ${rec.certified_at}</p>
+            <p><strong>Date:</strong> ${rec.date}</p>
+            <p><strong>By:</strong> ${rec.signer} — ${rec.reason}</p>
+          </div>
+
+          <div class="images">
+            ${rec.seal_img ? `<img src="${rec.seal_img}" alt="Seal" class="seal">` : ''}
+            ${rec.signature_img ? `<img src="${rec.signature_img}" alt="Signature" class="sign">` : ''}
+          </div>
+        `;
+
+        // QR (free image API) - links to this exact page with ?no=
+        const fullUrl = location.origin + location.pathname + '?no=' + encodeURIComponent(rec.no);
+        const qrImgUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(fullUrl);
+        document.getElementById('qrwrap').innerHTML = `<img src="${qrImgUrl}" alt="QR code for ${rec.no}">`;
+
+      } catch (err) {
+        document.getElementById('content').innerHTML = '<p>Error loading data</p>';
+        console.error(err);
+      }
+    }
+
+    document.getElementById('downloadBtn').addEventListener('click', () => {
+      const element = document.getElementById('doc');
+      const opt = {
+        margin:       10,
+        filename:     `application-${no || 'unknown'}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'pt', format: 'a4', orientation: 'portrait' }
+      };
+      html2pdf().set(opt).from(element).save();
+    });
+
+    render();
+  </script>
+</body>
+</html>

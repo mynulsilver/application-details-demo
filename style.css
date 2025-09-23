@@ -1,0 +1,10 @@
+body{font-family: system-ui, Arial; background:#f4f6f8; padding:20px}
+.card{background:#fff; padding:20px; border-radius:8px; max-width:900px; margin:0 auto; box-shadow:0 6px 18px rgba(0,0,0,.06)}
+header{display:flex; justify-content:space-between; align-items:center}
+h1{margin:0;font-size:18px}
+.doc-header h2{margin-top:10px;margin-bottom:6px}
+.images{margin-top:12px; display:flex; gap:12px; align-items:center}
+.images img.seal{height:90px}
+.images img.sign{height:70px}
+#qrwrap{margin-top:14px}
+button{background:#0b74de;color:#fff;border:0;padding:8px 12px;border-radius:6px;cursor:pointer}
