@@ -14,6 +14,7 @@
     "signature_img": "signature.jpg",
     "photo": "myphoto.jpg", 
     "contant_name": "সনদপত্র/নম্বরপত্র/একাডেমিক ট্রান্সক্রিপ্ট/ডকুমেন্টস",
+    "photo2":"photo2",
     "attachments": []
   },
   {
@@ -31,9 +32,11 @@
     "signature_img": "signature.jpg",
     "photo": "myphoto.jpg", 
     "contant_name": "সনদপত্র/নম্বরপত্র/একাডেমিক ট্রান্সক্রিপ্ট/ডকুমেন্টস",
+    "photo2":"photo2",
     "attachments": []
   }
 ]
+
 
 
 
