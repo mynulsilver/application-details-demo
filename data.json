@@ -12,6 +12,7 @@
     "reason": "Document Signing",
     "seal_img": "seal.png",
     "signature_img": "signature.jpg",
+    "Contant Name": "সনদপত্র/নম্বরপত্র/একাডেমিক ট্রান্সক্রিপ্ট/ডকুমেন্টস",
     "photo": "myphoto.jpg", 
     "attachments": []
   },
@@ -32,6 +33,7 @@
     "attachments": []
   }
 ]
+
 
 
 
