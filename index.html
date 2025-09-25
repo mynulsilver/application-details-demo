@@ -8,27 +8,28 @@
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
     .download-btn {
-      display: inline-block;
-      padding: 8px 14px;
-      margin-top: 10px;
-      background: #0074d9;
-      color: #fff;
-      text-decoration: none;
-      border-radius: 4px;
+      display:inline-block;
+      padding:8px 14px;
+      margin:10px 0;
+      background:#0074d9;
+      color:#fff;
+      text-decoration:none;
+      border-radius:4px;
     }
-    .download-btn:hover { background: #005fa3; }
-    img.photo { max-width: 250px; border: 1px solid #ccc; margin-top: 10px; }
+    .download-btn:hover { background:#005fa3; }
+    ul.attachments { list-style: none; padding-left: 0; }
+    ul.attachments li { margin: 5px 0; }
   </style>
 </head>
 <body>
 
   <h1>Application Details</h1>
 
-  <!-- First image will appear here -->
-  <div id="first-image"></div>
+  <!-- Top download button for main PDF -->
+  <div id="main-pdf-link"></div>
 
-  <!-- Download link for the full PDF will appear here -->
-  <div id="pdf-link"></div>
+  <!-- List of extra PDFs -->
+  <div id="extra-pdfs"></div>
 
   <!-- Other details -->
   <div id="details"></div>
@@ -46,23 +47,25 @@
           return;
         }
 
-        // Show the first image if it exists
-        if (record.photo) {
-          document.getElementById('first-image').innerHTML =
-            `<img src="${record.photo}" alt="Photo" class="photo">`;
-        }
-
-        // Show the PDF download link if it exists
-        if (record.pdf_file) {
-          document.getElementById('pdf-link').innerHTML =
-            `<a href="${record.pdf_file}" target="_blank" class="download-btn">
-               Download Full Document (PDF)
+        // Main PDF download button
+        if (record.main_pdf) {
+          document.getElementById('main-pdf-link').innerHTML =
+            `<a href="${record.main_pdf}" target="_blank" class="download-btn">
+               Download Main Document (PDF)
              </a>`;
         }
 
-        // Show the rest of the details
-        const detailsDiv = document.getElementById('details');
-        detailsDiv.innerHTML = `
+        // Extra PDFs list
+        if (record.attachments && record.attachments.length > 0) {
+          const listItems = record.attachments
+            .map((file, i) => `<li><a href="${file}" target="_blank">Attachment ${i + 1}</a></li>`)
+            .join('');
+          document.getElementById('extra-pdfs').innerHTML =
+            `<h3>Other Documents</h3><ul class="attachments">${listItems}</ul>`;
+        }
+
+        // Other textual details
+        document.getElementById('details').innerHTML = `
           <p><strong>No:</strong> ${record.no}</p>
           <p><strong>Country:</strong> ${record.country}</p>
           <p><strong>Signed By:</strong> ${record.signed_by}</p>
