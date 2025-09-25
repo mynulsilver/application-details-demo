@@ -1,129 +1,81 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Application Details</title>
-  <link rel="stylesheet" href="styles.css">
- 
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
+    .download-btn {
+      display: inline-block;
+      padding: 8px 14px;
+      margin-top: 10px;
+      background: #0074d9;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 4px;
+    }
+    .download-btn:hover { background: #005fa3; }
+    img.photo { max-width: 250px; border: 1px solid #ccc; margin-top: 10px; }
+  </style>
 </head>
 <body>
-  <main id="doc" class="card">
-    <h1>Application Details</h1>
 
-    <section id="content">
-      <p>Loading...</p>
-    </section>
-  </main>
+  <h1>Application Details</h1>
 
-  <!-- html2pdf for PDF generation -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
+  <!-- First image will appear here -->
+  <div id="first-image"></div>
+
+  <!-- Download link for the full PDF will appear here -->
+  <div id="pdf-link"></div>
+
+  <!-- Other details -->
+  <div id="details"></div>
 
   <script>
-    const DATA_JSON_PATH = 'data.json'; // change if your file lives elsewhere
-    let currentRecord = null;
+    fetch('data.json')
+      .then(res => res.json())
+      .then(data => {
+        const params = new URLSearchParams(window.location.search);
+        const no = params.get('no');
+        const record = data.find(r => r.no === no);
 
-    const params = new URLSearchParams(location.search);
-    const no = params.get('no') || '';
-
-    function escapeHtml(str) {
-      return String(str || '').replace(/[&<>"']/g,
-        m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[m])
-      );
-    }
-
-    async function render() {
-      try {
-        const res = await fetch(DATA_JSON_PATH);
-        if (!res.ok) throw new Error('Failed to load JSON');
-        const items = await res.json();
-
-        currentRecord = items.find(x => x.no === no);
-        const content = document.getElementById('content');
-
-        if (!currentRecord) {
-          content.innerHTML = `<p style="color:#b00;">No record found for number: ${escapeHtml(no)}</p>`;
+        if (!record) {
+          document.getElementById('details').innerHTML = '<p>No record found</p>';
           return;
         }
 
-        // Decide which image is the “first” for the PDF
-        const firstImage = currentRecord.photo || currentRecord.seal_img || currentRecord.signature_img || '';
+        // Show the first image if it exists
+        if (record.photo) {
+          document.getElementById('first-image').innerHTML =
+            `<img src="${record.photo}" alt="Photo" class="photo">`;
+        }
 
-        // Build HTML
-        content.innerHTML = `
-          <div class="doc-info">
-            <p><strong>No:</strong> ${escapeHtml(currentRecord.no)}</p>
-            <p><strong>Country:</strong> ${escapeHtml(currentRecord.country)}</p>
-            <p><strong>Certified at:</strong> ${escapeHtml(currentRecord.certified_at)}</p>
-            <p><strong>Date:</strong> ${escapeHtml(currentRecord.date)}</p>
-            <p><strong>Signer:</strong> ${escapeHtml(currentRecord.signer)}</p>
-          </div>
+        // Show the PDF download link if it exists
+        if (record.pdf_file) {
+          document.getElementById('pdf-link').innerHTML =
+            `<a href="${record.pdf_file}" target="_blank" class="download-btn">
+               Download Full Document (PDF)
+             </a>`;
+        }
 
-          <div class="images">
-            ${ firstImage ? `<div class="first-img-wrap">
-                                <img src="${firstImage}" alt="Main Image" id="firstImage">
-                                <button class="download-btn" id="downloadBtn">Download PDF</button>
-                              </div>` : '<p>No image available</p>' }
-            ${ currentRecord.seal_img && currentRecord.seal_img !== firstImage ?
-                `<img src="${currentRecord.seal_img}" alt="Seal">` : '' }
-            ${ currentRecord.signature_img && currentRecord.signature_img !== firstImage ?
-                `<img src="${currentRecord.signature_img}" alt="Signature">` : '' }
-          </div>
+        // Show the rest of the details
+        const detailsDiv = document.getElementById('details');
+        detailsDiv.innerHTML = `
+          <p><strong>No:</strong> ${record.no}</p>
+          <p><strong>Country:</strong> ${record.country}</p>
+          <p><strong>Signed By:</strong> ${record.signed_by}</p>
+          <p><strong>Acting in Capacity:</strong> ${record.acting_in_capacity}</p>
+          <p><strong>Seal Location:</strong> ${record.seal_location}</p>
+          <p><strong>Certified At:</strong> ${record.certified_at}</p>
+          <p><strong>Date:</strong> ${record.date}</p>
+          <p><strong>Signer:</strong> ${record.signer}</p>
+          <p><strong>Location:</strong> ${record.location}</p>
+          <p><strong>Reason:</strong> ${record.reason}</p>
         `;
-
-        // attach the click handler after HTML is injected
-        const btn = document.getElementById('downloadBtn');
-        if (btn) btn.addEventListener('click', downloadFirstImagePdf);
-      } catch (err) {
-        document.getElementById('content').innerHTML =
-          '<p style="color:#b00;">Error loading data.json. Check console.</p>';
-        console.error(err);
-      }
-    }
-
-    async function downloadFirstImagePdf() {
-      if (!currentRecord) return;
-      const firstImgEl = document.getElementById('firstImage');
-      if (!firstImgEl) {
-        alert('No image to include in PDF.');
-        return;
-      }
-
-      // Create a small container with only the first image
-      const temp = document.createElement('div');
-      temp.style.width = '600px';
-      temp.style.textAlign = 'center';
-      temp.innerHTML = `
-        <h2 style="font-family:Arial;margin-bottom:10px;">Application ${escapeHtml(currentRecord.no)}</h2>
-        <img src="${firstImgEl.src}" style="max-width:100%;border-radius:6px;">
-      `;
-      document.body.appendChild(temp);
-      
-      const options = {
-        margin: 10,
-        filename: `application-${currentRecord.no}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' }
-      };
-      await html2pdf().set(options).from(temp).save();
-      document.body.removeChild(temp);
-    }
-
-    render();
+      });
   </script>
+
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
