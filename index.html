@@ -5,93 +5,127 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Application Details</title>
   <link rel="stylesheet" href="styles.css">
+  <style>
+    body{font-family:system-ui,Arial;background:#f4f6f8;padding:20px}
+    .card{background:#fff;padding:20px;border-radius:8px;max-width:900px;margin:0 auto;
+          box-shadow:0 6px 18px rgba(0,0,0,.06)}
+    h1{margin-top:0;font-size:20px}
+    .doc-info p{margin:4px 0}
+    .images{margin-top:15px;display:flex;flex-wrap:wrap;gap:20px;align-items:center}
+    .images img{max-width:250px;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,0.15)}
+    .download-btn{display:inline-block;margin-top:10px;background:#0b74de;color:#fff;
+                  padding:8px 14px;border:none;border-radius:6px;cursor:pointer;
+                  text-decoration:none;font-size:14px}
+  </style>
 </head>
 <body>
   <main id="doc" class="card">
-    <header>
-      <h1>Application Details</h1>
-      <button id="downloadBtn">Download PDF</button>
-    </header>
+    <h1>Application Details</h1>
 
     <section id="content">
       <p>Loading...</p>
     </section>
-
-    <aside id="qrwrap">
-      <!-- QR will be inserted here -->
-    </aside>
   </main>
 
-  <!-- html2pdf (bundled with html2canvas + jsPDF) -->
+  <!-- html2pdf for PDF generation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
 
   <script>
-    // Get ?no= value
+    const DATA_JSON_PATH = 'data.json'; // change if your file lives elsewhere
+    let currentRecord = null;
+
     const params = new URLSearchParams(location.search);
     const no = params.get('no') || '';
 
+    function escapeHtml(str) {
+      return String(str || '').replace(/[&<>"']/g,
+        m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[m])
+      );
+    }
+
     async function render() {
       try {
-        const r = await fetch('data.json'); // relative path
-        const items = await r.json();
-        const rec = items.find(x => x.no === no);
+        const res = await fetch(DATA_JSON_PATH);
+        if (!res.ok) throw new Error('Failed to load JSON');
+        const items = await res.json();
+
+        currentRecord = items.find(x => x.no === no);
         const content = document.getElementById('content');
 
-        if (!rec) {
-          content.innerHTML = '<p style="color:#b00;">No record found for number: ' + (no || '(none)') + '</p>';
+        if (!currentRecord) {
+          content.innerHTML = `<p style="color:#b00;">No record found for number: ${escapeHtml(no)}</p>`;
           return;
         }
 
-        // Build HTML (brief example)
+        // Decide which image is the “first” for the PDF
+        const firstImage = currentRecord.photo || currentRecord.seal_img || currentRecord.signature_img || '';
+
+        // Build HTML
         content.innerHTML = `
-          <div class="doc-header">
-            <h2>E-APOSTILLE</h2>
-            <p><strong>Country:</strong> ${rec.country}</p>
-            <p><strong>No</strong> ${rec.no}</p>
-            <p><strong>Certified at:</strong> ${rec.certified_at}</p>
-            <p><strong>Date:</strong> ${rec.date}</p>
-            <p><strong>By:</strong> ${rec.signer} — ${rec.reason}</p>
-            ${rec.photo ? `<img src="${rec.photo}" alt="Photo" class="doc-photo">` : ''}
-            <p><strong>Content:</strong> ${rec.contant_name}</p>
-            ${rec.photo_d ? `<img src="${rec.photo_d}" alt="Photo" class="doc-photo">` : ''}
+          <div class="doc-info">
+            <p><strong>No:</strong> ${escapeHtml(currentRecord.no)}</p>
+            <p><strong>Country:</strong> ${escapeHtml(currentRecord.country)}</p>
+            <p><strong>Certified at:</strong> ${escapeHtml(currentRecord.certified_at)}</p>
+            <p><strong>Date:</strong> ${escapeHtml(currentRecord.date)}</p>
+            <p><strong>Signer:</strong> ${escapeHtml(currentRecord.signer)}</p>
           </div>
-          <div class="images2">
-           <p><strong>Content:</strong> ${rec.contant_name}</p>
-            ${rec.photo_d ? `<img src="${rec.photo_d}" alt="Photo" class="doc-photo">` : ''}
-            </div>
+
           <div class="images">
-            ${rec.seal_img ? `<img src="${rec.seal_img}" alt="Seal" class="seal">` : ''}
-            ${rec.signature_img ? `<img src="${rec.signature_img}" alt="Signature" class="sign">` : ''}
+            ${ firstImage ? `<div class="first-img-wrap">
+                                <img src="${firstImage}" alt="Main Image" id="firstImage">
+                                <button class="download-btn" id="downloadBtn">Download PDF</button>
+                              </div>` : '<p>No image available</p>' }
+            ${ currentRecord.seal_img && currentRecord.seal_img !== firstImage ?
+                `<img src="${currentRecord.seal_img}" alt="Seal">` : '' }
+            ${ currentRecord.signature_img && currentRecord.signature_img !== firstImage ?
+                `<img src="${currentRecord.signature_img}" alt="Signature">` : '' }
           </div>
         `;
 
-        // QR (free image API) - links to this exact page with ?no=
-        const fullUrl = location.origin + location.pathname + '?no=' + encodeURIComponent(rec.no);
-        const qrImgUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(fullUrl);
-        document.getElementById('qrwrap').innerHTML = `<img src="${qrImgUrl}" alt="QR code for ${rec.no}">`;
-
+        // attach the click handler after HTML is injected
+        const btn = document.getElementById('downloadBtn');
+        if (btn) btn.addEventListener('click', downloadFirstImagePdf);
       } catch (err) {
-        document.getElementById('content').innerHTML = '<p>Error loading data</p>';
+        document.getElementById('content').innerHTML =
+          '<p style="color:#b00;">Error loading data.json. Check console.</p>';
         console.error(err);
       }
     }
 
-    document.getElementById('downloadBtn').addEventListener('click', () => {
-      const element = document.getElementById('doc');
-      const opt = {
-        margin:       10,
-        filename:     `application-${no || 'unknown'}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2 },
-        jsPDF:        { unit: 'pt', format: 'a4', orientation: 'portrait' }
+    async function downloadFirstImagePdf() {
+      if (!currentRecord) return;
+      const firstImgEl = document.getElementById('firstImage');
+      if (!firstImgEl) {
+        alert('No image to include in PDF.');
+        return;
+      }
+
+      // Create a small container with only the first image
+      const temp = document.createElement('div');
+      temp.style.width = '600px';
+      temp.style.textAlign = 'center';
+      temp.innerHTML = `
+        <h2 style="font-family:Arial;margin-bottom:10px;">Application ${escapeHtml(currentRecord.no)}</h2>
+        <img src="${firstImgEl.src}" style="max-width:100%;border-radius:6px;">
+      `;
+      document.body.appendChild(temp);
+      
+      const options = {
+        margin: 10,
+        filename: `application-${currentRecord.no}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' }
       };
-      html2pdf().set(opt).from(element).save();
-    });
+      await html2pdf().set(options).from(temp).save();
+      document.body.removeChild(temp);
+    }
 
     render();
   </script>
 </body>
 </html>
+
 
 
 
